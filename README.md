@@ -1,1 +1,1 @@
-# rust-text-editor
+# Cidoka text editor

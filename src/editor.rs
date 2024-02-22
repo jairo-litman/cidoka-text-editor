@@ -1,33 +1,72 @@
-use std::io::{self, stdout};
+use crate::Terminal;
 use termion::event::Key;
-use termion::input::TermRead;
-use termion::raw::IntoRawMode;
 
-pub struct Editor {}
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+pub struct Editor {
+    should_quit: bool,
+    terminal: Terminal,
+}
 
 impl Editor {
-    pub fn run(&self) {
-        let _stdout = stdout().into_raw_mode().unwrap();
-
-        for key in io::stdin().keys() {
-            match key {
-                Ok(key) => match key {
-                    Key::Char(c) => {
-                        if c.is_control() {
-                            println!("{:?}\r", c as u8);
-                        } else {
-                            println!("{:?} ({})\r", c as u8, c);
-                        }
-                    }
-                    Key::Ctrl('q') => break,
-                    _ => println!("{:?}\r", key),
-                },
-                Err(err) => die(err),
+    pub fn run(&mut self) {
+        loop {
+            if let Err(error) = self.refresh_screen() {
+                die(&error);
+            }
+            if self.should_quit {
+                break;
+            }
+            if let Err(error) = self.process_keypress() {
+                die(&error);
             }
         }
     }
+
+    pub fn default() -> Self {
+        Self {
+            should_quit: false,
+            terminal: Terminal::default().expect("Failed to initialize terminal"),
+        }
+    }
+
+    fn refresh_screen(&self) -> Result<(), std::io::Error> {
+        Terminal::cursor_hide();
+        Terminal::cursor_position(0, 0);
+        if self.should_quit {
+            Terminal::clear_screen();
+            println!("Goodbye.\r");
+        } else {
+            self.draw_rows();
+            Terminal::cursor_position(0, 0);
+        }
+        Terminal::cursor_show();
+        Terminal::flush()
+    }
+
+    fn draw_rows(&self) {
+        let height = self.terminal.size().height;
+        for row in 0..height - 1 {
+            Terminal::clear_current_line();
+            if row == height / 3 {
+                println!("Cidoka editor -- version {}\r", VERSION);
+            } else {
+                println!("~\r");
+            }
+        }
+    }
+
+    fn process_keypress(&mut self) -> Result<(), std::io::Error> {
+        let processed_key = Terminal::read_key()?;
+        match processed_key {
+            Key::Ctrl('q') => self.should_quit = true,
+            _ => (),
+        }
+        Ok(())
+    }
 }
 
-fn die(e: std::io::Error) {
-    panic!("{:?}", e);
+fn die(e: &std::io::Error) {
+    Terminal::clear_screen();
+    panic!("{e:?}");
 }
