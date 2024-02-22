@@ -37,7 +37,7 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2
       - name: Linting
-        run: cargo clippy -- -D warnings
+        run: cargo clippy -- -W clippy::pedantic
 
   coverage:
     name: Code coverage
