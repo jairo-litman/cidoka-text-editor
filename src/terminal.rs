@@ -15,18 +15,23 @@ pub struct Terminal {
     _stdout: RawTerminal<io::Stdout>,
 }
 
-impl Terminal {
-    pub fn new_default() -> Result<Self, io::Error> {
-        let size = termion::terminal_size()?;
-        Ok(Self {
+impl Default for Terminal {
+    fn default() -> Self {
+        let size = termion::terminal_size().expect("Failed to obtain terminal size");
+
+        Self {
             size: Size {
                 width: size.0,
                 height: size.1,
             },
-            _stdout: io::stdout().into_raw_mode()?,
-        })
+            _stdout: io::stdout()
+                .into_raw_mode()
+                .expect("Failed to initialize terminal"),
+        }
     }
+}
 
+impl Terminal {
     pub fn size(&self) -> &Size {
         &self.size
     }
